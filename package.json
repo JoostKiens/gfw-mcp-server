@@ -31,7 +31,6 @@
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
     "eslint": "^10.7.0",
-    "eslint-plugin-functional": "^10.0.0",
     "prettier": "^3.9.6",
     "typescript": "^6.0.0",
     "vitest": "^4.1.10"

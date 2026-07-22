@@ -17,7 +17,7 @@ test("stdio list_tools via child process", async () => {
 
   const rl = readline.createInterface({ input: cp.stdout });
 
-  let gotResponse: any = null;
+  let gotResponse: unknown = null;
 
   for await (const line of rl) {
     try {
