@@ -55,13 +55,7 @@ export interface GfwClient {
   readonly post: <T = unknown>(path: string, body?: unknown) => Promise<GfwResult<T>>;
 }
 
-interface GfwClientConfig {
-  readonly baseUrl?: string;
-}
-
-function getAuthToken(): string | undefined {
-  return process.env.GFW_API_TOKEN;
-}
+const GFW_BASE_URL = "https://gateway.api.globalfishingwatch.org";
 
 function parseRateLimitRemaining(headers: Headers): number | undefined {
   const remaining = headers.get("x-ratelimit-remaining");
@@ -71,14 +65,6 @@ function parseRateLimitRemaining(headers: Headers): number | undefined {
 
   const parsed = Number.parseInt(remaining, 10);
   return Number.isNaN(parsed) ? undefined : parsed;
-}
-
-async function readResponseBody(response: Response): Promise<string> {
-  try {
-    return await response.text();
-  } catch {
-    return "";
-  }
 }
 
 function normalizeError(status: number, message: string, rateLimitRemaining?: number): GfwError {
@@ -129,11 +115,9 @@ function normalizeError(status: number, message: string, rateLimitRemaining?: nu
   }
 }
 
-export function createGfwClient(config: GfwClientConfig = {}): GfwClient {
-  const baseUrl = config.baseUrl ?? "https://gateway.api.globalfishingwatch.org";
-
+export function createGfwClient(): GfwClient {
   async function request<T>(method: GfwHttpMethod, path: string, body?: unknown): Promise<GfwResult<T>> {
-    const token = getAuthToken();
+    const token = process.env.GFW_API_TOKEN;
     if (!token) {
       return {
         ok: false,
@@ -145,7 +129,7 @@ export function createGfwClient(config: GfwClientConfig = {}): GfwClient {
       };
     }
 
-    const url = `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+    const url = `${GFW_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
     const headers: Record<string, string> = {
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
@@ -179,7 +163,7 @@ export function createGfwClient(config: GfwClientConfig = {}): GfwClient {
     const rateLimitRemaining = parseRateLimitRemaining(response.headers);
 
     if (!response.ok) {
-      const bodyText = await readResponseBody(response);
+      const bodyText = await response.text().catch(() => "");
       const message = bodyText ? bodyText : response.statusText || "No response body";
       return {
         ok: false,

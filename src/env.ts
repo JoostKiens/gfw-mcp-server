@@ -13,10 +13,7 @@ export function loadEnvironment(): void {
 
     const result = config({ path: envPath, override: false });
     if (result.error) {
-      const error = result.error as Error & { code?: string };
-      if (error.code !== "ENOENT") {
-        throw result.error;
-      }
+      throw result.error;
     }
   }
 }
