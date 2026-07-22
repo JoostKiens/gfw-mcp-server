@@ -1,0 +1,38 @@
+{
+  "name": "gfw-mcp-server",
+  "version": "0.1.0",
+  "description": "Global Fishing Watch MCP server",
+  "type": "module",
+  "bin": {
+    "gfw-mcp-server": "dist/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joostkiens/gfw-mcp-server.git"
+  },
+  "license": "MIT",
+  "author": "Joost Kiens",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -w -p tsconfig.json",
+    "start": "node dist/index.js",
+    "start:http": "node dist/index.js --http",
+    "lint": "eslint . --ext .ts",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
+    "eslint": "^10.7.0",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.0",
+    "vitest": "^4.1.10"
+  }
+}
