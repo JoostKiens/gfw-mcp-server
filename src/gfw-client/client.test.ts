@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createGfwClient } from "../../src/gfw-client/client.js";
+import { createGfwClient } from "./client.js";
 
 describe("createGfwClient", () => {
   afterEach(() => {

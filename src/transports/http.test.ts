@@ -4,7 +4,7 @@ import { afterEach, expect, test } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
-import { startHttp } from "../../src/transports/http.js";
+import { startHttp } from "./http.js";
 
 let server: http.Server | null = null;
 

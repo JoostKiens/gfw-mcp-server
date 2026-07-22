@@ -5,7 +5,7 @@ module.exports = [
     ignores: ['dist/**', 'node_modules/**'],
   },
   {
-    files: ['src/**/*.ts', 'test/**/*.ts'],
+    files: ['src/**/*.ts'],
     languageOptions: {
       parser: require('@typescript-eslint/parser'),
       parserOptions: {
