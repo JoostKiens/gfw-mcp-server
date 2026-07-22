@@ -1,0 +1,1 @@
+# mcp-global-fishing-watch
