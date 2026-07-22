@@ -13,6 +13,7 @@ dist/
 build/
 coverage/
 out/
+test/
 
 # Environment files
 .env
