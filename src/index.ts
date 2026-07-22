@@ -1,14 +1,8 @@
+import { loadEnvironment, requireEnv } from "./env.js";
 import { startStdio } from "./transports/stdio.js";
 import { startHttp } from "./transports/http.js";
 
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) {
-    console.error(`Missing required env var ${name}. Set it in the environment or .env`);
-    process.exit(2);
-  }
-  return v;
-}
+loadEnvironment();
 
 // Ensure required env var exists at startup (per conventions)
 requireEnv("GFW_API_TOKEN");
