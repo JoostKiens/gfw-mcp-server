@@ -5,24 +5,22 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 
 import { createMcpServer } from "../create-server.js";
 
-async function readBody(req: IncomingMessage): Promise<unknown> {
-  let raw = "";
-  for await (const chunk of req) raw += String(chunk);
-  return raw ? JSON.parse(raw) : undefined;
-}
-
 export async function startHttp(options: { port: number }): Promise<Server> {
   const httpServer = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
     try {
-      const parsedBody = await readBody(req);
       // Stateless mode: the SDK requires a fresh transport (and server) per request.
+      // No pre-parsed body is passed — the SDK reads and JSON-parses the request
+      // itself, correctly, with proper Content-Type checks and JSON-RPC error shapes.
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       res.on("close", () => transport.close());
       await createMcpServer().connect(transport);
-      await transport.handleRequest(req, res, parsedBody);
-    } catch {
-      res.statusCode = 400;
-      res.end("invalid json\n");
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      console.error("Error handling MCP request:", error);
+      if (!res.headersSent) {
+        res.statusCode = 500;
+        res.end();
+      }
     }
   });
 

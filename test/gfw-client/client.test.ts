@@ -78,7 +78,7 @@ describe("createGfwClient", () => {
       throw new Error("Expected unauthorized result");
     }
 
-    expect(result.error.kind).toBe("unauthorized");
+    expect(result.error.kind).toBe("http-error");
     expect(result.error.message).toContain("GFW_API_TOKEN");
   });
 
@@ -103,8 +103,9 @@ describe("createGfwClient", () => {
     }
 
     expect(result.error.kind).toBe("rate-limited");
-    expect(result.error.rateLimitRemaining).toBe(0);
+    expect(result.rateLimitRemaining).toBe(0);
     expect(result.error.message).toContain("rate limit");
+    expect(result.error.message).toContain("quota exceeded");
   });
 
   it("returns a generic error for unexpected upstream failures", async () => {
@@ -129,5 +130,6 @@ describe("createGfwClient", () => {
 
     expect(result.error.kind).toBe("request");
     expect(result.error.message).toContain("request to GFW failed");
+    expect(result.error.message).toContain("boom");
   });
 });

@@ -5,8 +5,12 @@ import { startHttp } from "./transports/http.js";
 
 loadEnvironment();
 
-// Ensure required env var exists at startup (per conventions)
-requireEnv("GFW_API_TOKEN");
+try {
+  requireEnv("GFW_API_TOKEN");
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(2);
+}
 
 const args = process.argv.slice(2);
 const isHttp = args.includes("--http");

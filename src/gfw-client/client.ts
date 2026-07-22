@@ -1,7 +1,3 @@
-import { loadEnvironment } from "../env.js";
-
-loadEnvironment();
-
 export type GfwHttpMethod = "GET" | "POST";
 
 export type GfwResult<T> =
@@ -14,34 +10,13 @@ export type GfwResult<T> =
 
 export type GfwError =
   | {
-      readonly kind: "unauthorized";
-      readonly status: 401;
-      readonly message: string;
-    }
-  | {
-      readonly kind: "forbidden";
-      readonly status: 403;
-      readonly message: string;
-    }
-  | {
-      readonly kind: "not-found";
-      readonly status: 404;
-      readonly message: string;
-    }
-  | {
-      readonly kind: "validation";
-      readonly status: 422;
+      readonly kind: "http-error";
+      readonly status: 401 | 403 | 404 | 422 | 524;
       readonly message: string;
     }
   | {
       readonly kind: "rate-limited";
       readonly status: 429;
-      readonly message: string;
-      readonly rateLimitRemaining?: number;
-    }
-  | {
-      readonly kind: "timeout";
-      readonly status: 524;
       readonly message: string;
     }
   | {
@@ -67,52 +42,29 @@ function parseRateLimitRemaining(headers: Headers): number | undefined {
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
-function normalizeError(status: number, message: string, rateLimitRemaining?: number): GfwError {
-  switch (status) {
-    case 401:
-      return {
-        kind: "unauthorized",
-        status: 401,
-        message: "GFW authentication failed. Check that GFW_API_TOKEN is set correctly and has access to the requested endpoint.",
-      };
-    case 403:
-      return {
-        kind: "forbidden",
-        status: 403,
-        message: "GFW denied the request. The token may not have permission for this endpoint.",
-      };
-    case 404:
-      return {
-        kind: "not-found",
-        status: 404,
-        message: "GFW could not find the requested resource.",
-      };
-    case 422:
-      return {
-        kind: "validation",
-        status: 422,
-        message: "The request was rejected by GFW validation.",
-      };
-    case 429:
-      return {
-        kind: "rate-limited",
-        status: 429,
-        message: "GFW rate limit exceeded. Retry later.",
-        rateLimitRemaining,
-      };
-    case 524:
-      return {
-        kind: "timeout",
-        status: 524,
-        message: "GFW request timed out.",
-      };
-    default:
-      return {
-        kind: "request",
-        status,
-        message: `request to GFW failed with status ${status}.`,
-      };
+const HTTP_ERROR_MESSAGES: Record<401 | 403 | 404 | 422 | 524, string> = {
+  401: "GFW authentication failed. Check that GFW_API_TOKEN is set correctly and has access to the requested endpoint.",
+  403: "GFW denied the request. The token may not have permission for this endpoint.",
+  404: "GFW could not find the requested resource.",
+  422: "The request was rejected by GFW validation.",
+  524: "GFW request timed out.",
+};
+
+function normalizeError(status: number, message: string): GfwError {
+  if (status === 429) {
+    return { kind: "rate-limited", status: 429, message: `GFW rate limit exceeded. Retry later. (GFW response: ${message})` };
   }
+
+  const genericMessage = HTTP_ERROR_MESSAGES[status as keyof typeof HTTP_ERROR_MESSAGES];
+  if (genericMessage) {
+    return { kind: "http-error", status: status as 401 | 403 | 404 | 422 | 524, message: `${genericMessage} (GFW response: ${message})` };
+  }
+
+  return {
+    kind: "request",
+    status,
+    message: `request to GFW failed with status ${status}. (GFW response: ${message})`,
+  };
 }
 
 export function createGfwClient(): GfwClient {
@@ -122,7 +74,7 @@ export function createGfwClient(): GfwClient {
       return {
         ok: false,
         error: {
-          kind: "unauthorized",
+          kind: "http-error",
           status: 401,
           message: "GFW_API_TOKEN is missing. Set it in the environment or .env before calling GFW.",
         },
@@ -167,7 +119,7 @@ export function createGfwClient(): GfwClient {
       const message = bodyText ? bodyText : response.statusText || "No response body";
       return {
         ok: false,
-        error: normalizeError(response.status, message, rateLimitRemaining),
+        error: normalizeError(response.status, message),
         rateLimitRemaining,
       };
     }
