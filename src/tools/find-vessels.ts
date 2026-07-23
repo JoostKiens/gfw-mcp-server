@@ -32,7 +32,9 @@ const FIND_VESSELS_INFERRED_TYPE_CAVEAT =
 const FIND_VESSELS_FILTER_WINDOW_CAVEAT =
   "flag/geartype filtering is applied locally, after GFW's search — GFW does not support combining a free-text " +
   "query with a structured filter in one request. A matching vessel ranked outside limit by the free-text search " +
-  "won't appear; increase limit or narrow query if you expect more matches.";
+  "won't appear; increase limit or narrow query if you expect more matches. The filter only checks each vessel's " +
+  "current flag/geartype, not previouslyKnownAs history — a vessel that used to match won't appear if it doesn't " +
+  "match now.";
 
 // Process-lifetime, no ttlMs (vessel identity doesn't change within a process run —
 // see docs/claude/architecture.md). A module-scope const here is a true singleton
@@ -83,8 +85,14 @@ export function buildVesselSearchPath(input: FindVesselsInput): string {
   return `${VESSEL_SEARCH_ENDPOINT}?${params.toString()}`;
 }
 
+// Matches against the vessel's current (collapsed-primary) flag/geartype only —
+// not previouslyKnownAs history, so a vessel that used to carry a matching flag
+// or geartype but doesn't currently won't match. GFW always returns flag as
+// uppercase ISO3 and geartype as UPPER_SNAKE_CASE, so both sides of the compare
+// are normalized to uppercase — an un-normalized flag input silently returned
+// zero matches for any caller who didn't happen to pass it pre-uppercased.
 function matchesFilters(vessel: VesselIdentity, input: FindVesselsInput): boolean {
-  if (input.flag && vessel.flag !== input.flag) {
+  if (input.flag && vessel.flag !== input.flag.toUpperCase()) {
     return false;
   }
   if (input.geartype && vessel.geartype !== input.geartype.toUpperCase()) {

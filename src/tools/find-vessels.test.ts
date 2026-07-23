@@ -58,6 +58,16 @@ describe("handleFindVessels", () => {
     expect(client.get).toHaveBeenCalledWith(expect.not.stringContaining("flag"));
   });
 
+  it("filters results locally by flag case-insensitively, matching GFW's always-uppercase flag values", async () => {
+    const client = createMockClient();
+    vi.mocked(client.get).mockResolvedValue(fixtureResponse);
+
+    const result = await handleFindVessels(client, new Cache(), { query: "EXAMPLE", flag: "esp" });
+
+    if (!result.ok) throw new Error("expected success");
+    expect(result.value.vessels.map((v) => v.vesselId)).toEqual(["abc123"]);
+  });
+
   it("filters results locally by geartype, uppercasing to match GFW's vocabulary", async () => {
     const client = createMockClient();
     vi.mocked(client.get).mockResolvedValue(fixtureResponse);
