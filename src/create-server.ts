@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { AjvJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/ajv";
 
 import { createGfwClient } from "./gfw-client/client.js";
+import { registerFindRegionTool } from "./tools/find-region.js";
 import { registerFindVesselsTool } from "./tools/find-vessels.js";
 
 // Shared across every McpServer instance so Ajv's setup (registering ajv-formats)
@@ -17,5 +18,6 @@ const gfwClient = createGfwClient();
 export function createMcpServer(): McpServer {
   const server = new McpServer({ name: "gfw-mcp-server", version: "0.1.0" }, { jsonSchemaValidator });
   registerFindVesselsTool(server, gfwClient);
+  registerFindRegionTool(server, gfwClient);
   return server;
 }
