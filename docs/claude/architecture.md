@@ -15,7 +15,7 @@ src/
   tools/                 # one file per MCP tool — thin: schema + orchestration only
   gfw-client/             # HTTP client for the GFW v3 API (auth, error typing, rate-limit awareness)
   cache/                   # generic TTL cache + the 4Wings report queue
-  reference-data/           # bundled gear types, vessel types, EEZ name→ID table
+  reference-data/           # bundled gear types, vessel types
 ```
 
 Each `tools/*.ts` file should be readable top-to-bottom: validate input → resolve any names (region, gear type) → fetch (via `gfw-client`, through `cache`/queue where relevant) → summarize → attach caveats → return. The summarization and validation logic itself should live in small pure functions, ideally in the same file or a co-located `*.logic.ts`, so it's unit-testable without mocking the MCP transport.
@@ -27,7 +27,7 @@ Using `get_fishing_activity` as the representative case (the most complex path �
 ```
 MCP tool call
   → Zod schema validation (reject malformed input immediately, no GFW call made)
-  → region name resolution (find_region logic, or pass-through if regionId given)
+  → region name resolution (find_region — cached GFW context-layers lookup, or pass-through if region.id/region.dataset given directly)
   → date-range validation (≤ 366 days — reject client-side, see CLAUDE.md)
   → report cache lookup (15-min TTL, keyed on normalized params)
       hit  → return cached summary
@@ -56,17 +56,18 @@ Do not call `4wings/report` from anywhere except through this queue.
 
 ## Cache layer
 
-Two independent caches, one generic `Cache<K, V>` implementation:
+Three independent caches, one generic `Cache<K, V>` implementation:
 - **Vessel metadata cache** — long-lived (vessel identity doesn't change within a process run). Reduces redundant `find_vessels` lookups when a conversation references the same vessel repeatedly.
 - **4Wings report cache** — 15-minute TTL. This is the higher-value cache: report calls are slow and serialized, so avoiding a repeat call matters more here than anywhere else in the system.
+- **EEZ context-layer cache** — cached for the life of the process, populated once. `find_region`'s first call in a process fetches GFW's full EEZ region list and stores it; every later call in that process is served from the cache.
 
 Cache keys for reports are built from *normalized* query params (sorted, consistent formatting) so that equivalent queries with differently-ordered parameters still hit the same entry.
 
-## Reference data (why it's hand-curated, not generated)
+## Reference data
 
-`src/reference-data/eez-regions.ts` maps country names to GFW's numeric `public-eez-areas` region IDs. This is **not** derived from a third-party geo dataset (Marine Regions/MRGID, ProtectedSeas, FAO boundaries) at build time, even though those are the sources GFW itself uses for its own map layers. The reason: those sources' IDs aren't guaranteed to line up with GFW's own internal region IDs — GFW's R package (`gfwr`) handles this by shipping a manually cross-walked table, not an automatic join. We do the same: every entry in our table has been verified against a live `4wings/report` call, not assumed correct because it matched a plausible-looking external ID.
+**Gear types and vessel types (`src/reference-data/gear-types.ts`, `vessel-types.ts`)** are bundled at build time as Zod enums, pulled directly from the relevant dataset's live `filters` metadata (`GET /v3/datasets/public-global-fishing-effort:latest` for gear types, `GET /v3/datasets/public-global-vessel-identity:latest` for vessel types) — so the enum stays in sync with what GFW's API actually accepts.
 
-Extending this table means adding a new hand-verified entry, not swapping in a bulk import.
+Bundling is the right depth here specifically because these are small, closed sets (~10-20 values each) needed synchronously at module load, to build the Zod schema tool input validation depends on before any request happens — there's no point fetching them per-process when GFW itself only changes them rarely. EEZ regions are the opposite shape: ~280 entries, needed only for fuzzy-matching a caller's free-text name (not for schema construction), which is exactly what makes a runtime fetch + cache the better fit there instead. Re-run the relevant `GET /v3/datasets/...` request and update the enum by hand if GFW adds a new gear or vessel type.
 
 ## Transports
 

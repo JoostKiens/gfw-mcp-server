@@ -44,11 +44,15 @@ GFW's vessel search returns multiple historical AIS identities per real-world ve
 
 Encounter events come back as one row per vessel involved (composite ID `eventId.1`/`eventId.2`). Merge these into a single encounter record with both parties named before returning — never surface the raw two-row split to the LLM.
 
+## Region name fuzzy matching (used by `find_region`, referenced elsewhere)
+
+`find_region` resolves a free-text name against the cached EEZ id+name list (see `architecture.md` for how that list is fetched and cached) using fuzzy matching, handling common variants (e.g. "UK" / "United Kingdom", "USA" / "United States"). When nothing matches, return actionable guidance: the caller should pass `region.id` + `region.dataset` directly.
+
 ## When you're not sure whether something belongs in a tool file or in `reference-data/`/`gfw-client`
 
 - **Tool file**: orchestration and this-tool-specific summarization/formatting.
 - **`gfw-client`**: anything about *how* to talk to GFW (auth, error typing, retries at the HTTP level) — no domain knowledge about fishing effort, vessels, etc.
-- **`reference-data`**: static, hand-verified lookup data (enums, the EEZ table) — no logic beyond simple lookup/fuzzy-match.
+- **`reference-data`**: static, build-time enums (gear types, vessel types) sourced from live GFW dataset metadata — no logic beyond simple lookup.
 - **`cache`**: the generic `Cache<K,V>` and `ReportQueue` — no GFW-specific or tool-specific logic; they operate on opaque keys and values.
 
 If logic would be useful to two or more tools (e.g. region-name fuzzy matching, vessel-identity collapse), it doesn't live in either tool's file — it moves to a shared module, imported by both, per Single Responsibility / avoid-duplication in `conventions.md`.

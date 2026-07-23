@@ -66,7 +66,7 @@ GFW_API_TOKEN=your-token-here gfw-mcp-server --http --port 3000
 | `get_vessel_presence` | General AIS vessel traffic for a region — cargo, carrier, and other non-fishing vessel movement. |
 | `get_vessel_events` | A vessel's fishing/encounter/loitering/port-visit/AIS-gap history, summarized (event counts, distinct ports, longest AIS-off gap). |
 | `get_vessel_insights` | GFW's own IUU-risk indicators for a vessel — no-take MPA fishing, unauthorized-area fishing, AIS-off patterns, RFMO IUU-list membership. |
-| `list_reference_data` | Static lookup: supported gear types, vessel types, and the bundled EEZ name table. |
+| `list_reference_data` | Static lookup: supported gear types and vessel types. (EEZ region names are resolved separately, at runtime, by `find_region`.) |
 
 Full architecture and design rationale: [`docs/claude/architecture.md`](docs/claude/architecture.md).
 
@@ -88,7 +88,7 @@ You can — GFW's API is well-documented and there are official [Python](https:/
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). In particular, extending the bundled EEZ region table requires hand-verifying new entries against a live API call — see [`docs/claude/architecture.md`](docs/claude/architecture.md#reference-data-why-its-hand-curated-not-generated) for why.
+See [`.CLAUDE.md`](.CLAUDE.md) and [`docs/claude/`](docs/claude/) for conventions and architecture. In particular: gear-type and vessel-type reference data is sourced from live GFW dataset metadata, not hand-transcribed (see [`docs/claude/architecture.md`](docs/claude/architecture.md#reference-data)); EEZ region lookup is resolved at runtime by `find_region`, not a bundled table — see the same doc's Cache layer section.
 
 ## License
 

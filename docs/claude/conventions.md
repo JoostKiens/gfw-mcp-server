@@ -74,7 +74,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<sc
 | `scaffolding`    | Project skeleton, transports (STDIO/HTTP), build/tooling config, env setup                                       |
 | `gfw-client`     | GFW API HTTP client, auth, error typing, rate-limit handling                                                     |
 | `cache`          | `Cache<K,V>`, the 4Wings report queue and 524 recovery                                                           |
-| `reference-data` | Gear types, vessel types, EEZ name→ID table                                                                      |
+| `reference-data` | Gear types, vessel types                                                                                         |
 | `tools`          | Any MCP tool logic (`src/tools/*`) — use a sub-scope like `tools/find-vessels` if a commit touches only one tool |
 | `docs`           | README, CLAUDE.md, `docs/claude/*`                                                                               |
 | `tests`          | Unit tests, fixtures, live smoke tests, MCP conformance tests                                                    |
@@ -87,3 +87,26 @@ fix(cache): normalize date-range param ordering in report cache key
 docs(scaffolding): document GFW_API_TOKEN setup in CLAUDE.md
 chore(release): bump to v0.1.0
 ```
+
+## Pull requests
+
+**Title** follows the same `<type>(<scope>): <description>` shape as commit messages, with the Linear ticket id inserted right after the colon when one exists:
+
+```
+feat(scaffolding): JOO7 - build-time gear/vessel-type reference data
+```
+
+Omit the ticket segment entirely when there isn't one — just `<type>(<scope>): <description>`.
+
+**Description** opens with a `## Context` section, before `## Summary` and `## Test plan`:
+
+- **A Linear ticket exists for the work:** link it directly.
+  ```
+  ## Context
+  https://linear.app/joostkiens/issue/JOO-7/scaffold-build-time-reference-data-gear-types-vessel-types
+  ```
+- **No ticket** (a small fix, a doc cleanup, something opportunistic): a short blurb — one or two sentences on why the change is happening — instead of a link.
+  ```
+  ## Context
+  Fixes a stale doc reference to the EEZ table found while reviewing JOO-7's docs; no separate ticket for this.
+  ```
