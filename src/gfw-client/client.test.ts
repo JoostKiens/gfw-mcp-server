@@ -132,4 +132,29 @@ describe("createGfwClient", () => {
     expect(result.error.message).toContain("request to GFW failed");
     expect(result.error.message).toContain("boom");
   });
+
+  it("returns a typed error instead of throwing when a 200 response body isn't valid JSON", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => {
+        throw new SyntaxError("Unexpected end of JSON input");
+      },
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    process.env.GFW_API_TOKEN = "test-token";
+
+    const client = createGfwClient();
+    const result = await client.get("/v3/endpoint");
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error("Expected request error");
+    }
+
+    expect(result.error.kind).toBe("request");
+    expect(result.error.message).toContain("could not be parsed");
+  });
 });

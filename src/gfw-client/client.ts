@@ -1,12 +1,8 @@
+import type { Result } from "../result.js";
+
 export type GfwHttpMethod = "GET" | "POST";
 
-export type GfwResult<T> =
-  | { readonly ok: true; readonly value: T; readonly rateLimitRemaining?: number }
-  | {
-      readonly ok: false;
-      readonly error: GfwError;
-      readonly rateLimitRemaining?: number;
-    };
+export type GfwResult<T> = Result<T, GfwError> & { readonly rateLimitRemaining?: number };
 
 export type GfwError =
   | {
@@ -50,20 +46,37 @@ const HTTP_ERROR_MESSAGES: Record<401 | 403 | 404 | 422 | 524, string> = {
   524: "GFW request timed out.",
 };
 
-function normalizeError(status: number, message: string): GfwError {
+// Extracts only a `message` string field from the GFW error body, never the raw
+// body text itself — GFW response bodies aren't a contract we want to pass through
+// unfiltered to tool callers (see docs/claude/architecture.md's error-classification row).
+function extractGfwMessage(bodyText: string): string | undefined {
+  try {
+    const parsed = JSON.parse(bodyText) as unknown;
+    if (parsed && typeof parsed === "object" && "message" in parsed && typeof parsed.message === "string") {
+      return parsed.message;
+    }
+  } catch {
+    // Not JSON — no message to extract.
+  }
+  return undefined;
+}
+
+function normalizeError(status: number, bodyText: string, statusText: string): GfwError {
+  const gfwMessage = extractGfwMessage(bodyText) ?? statusText;
+
   if (status === 429) {
-    return { kind: "rate-limited", status: 429, message: `GFW rate limit exceeded. Retry later. (GFW response: ${message})` };
+    return { kind: "rate-limited", status: 429, message: `GFW rate limit exceeded. Retry later. (${gfwMessage})` };
   }
 
   const genericMessage = HTTP_ERROR_MESSAGES[status as keyof typeof HTTP_ERROR_MESSAGES];
   if (genericMessage) {
-    return { kind: "http-error", status: status as 401 | 403 | 404 | 422 | 524, message: `${genericMessage} (GFW response: ${message})` };
+    return { kind: "http-error", status: status as 401 | 403 | 404 | 422 | 524, message: `${genericMessage} (${gfwMessage})` };
   }
 
   return {
     kind: "request",
     status,
-    message: `request to GFW failed with status ${status}. (GFW response: ${message})`,
+    message: `request to GFW failed with status ${status}. (${gfwMessage})`,
   };
 }
 
@@ -116,15 +129,27 @@ export function createGfwClient(): GfwClient {
 
     if (!response.ok) {
       const bodyText = await response.text().catch(() => "");
-      const message = bodyText ? bodyText : response.statusText || "No response body";
       return {
         ok: false,
-        error: normalizeError(response.status, message),
+        error: normalizeError(response.status, bodyText, response.statusText || "No response body"),
         rateLimitRemaining,
       };
     }
 
-    const value = (await response.json()) as T;
+    let value: T;
+    try {
+      value = (await response.json()) as T;
+    } catch {
+      return {
+        ok: false,
+        error: {
+          kind: "request",
+          status: response.status,
+          message: "GFW returned a response that could not be parsed as JSON.",
+        },
+        rateLimitRemaining,
+      };
+    }
     return {
       ok: true,
       value,
