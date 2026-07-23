@@ -21,6 +21,6 @@ test("stdio server lists tools via the MCP client", async () => {
   client = new Client({ name: "test-client", version: "0.0.0" });
   await client.connect(transport);
 
-  // No tools are registered yet, so the server doesn't advertise the "tools" capability.
-  expect(client.getServerCapabilities()?.tools).toBeUndefined();
+  const { tools } = await client.listTools();
+  expect(tools.map((tool) => tool.name)).toContain("find_vessels");
 });

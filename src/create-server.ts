@@ -1,16 +1,21 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { AjvJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/ajv";
 
+import { createGfwClient } from "./gfw-client/client.js";
+import { registerFindVesselsTool } from "./tools/find-vessels.js";
+
 // Shared across every McpServer instance so Ajv's setup (registering ajv-formats)
 // happens once per process rather than once per HTTP request.
 const jsonSchemaValidator = new AjvJsonSchemaValidator();
 
-// ponytail: tool registration is stateless today (no tools exist yet), so a fresh
-// McpServer per call is fine — required for the HTTP transport's per-request use.
-// If a process-lifetime singleton (report queue, caches per architecture.md) is
-// ever needed, construct it at module scope here and inject it into tool closures,
-// not inside this factory — constructing it per-call would break the queue's
-// single-concurrency guarantee across concurrent HTTP requests.
+// Constructed once per process, at module scope — shared across every
+// createMcpServer() call, including the HTTP transport's per-request McpServer
+// instances. Constructing it inside the factory below would break any tool that
+// depends on process-lifetime state (queues, caches per architecture.md).
+const gfwClient = createGfwClient();
+
 export function createMcpServer(): McpServer {
-  return new McpServer({ name: "gfw-mcp-server", version: "0.1.0" }, { jsonSchemaValidator });
+  const server = new McpServer({ name: "gfw-mcp-server", version: "0.1.0" }, { jsonSchemaValidator });
+  registerFindVesselsTool(server, gfwClient);
+  return server;
 }

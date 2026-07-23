@@ -1,9 +1,11 @@
 # cache
 
-Generic in-memory caching primitives, scoped to the life of one process. Vessel
-metadata and EEZ region lookups still need their own typed `Cache` instance
-constructed when those tools are implemented; the 4Wings report cache is already
-wired up inside `ReportQueue` below.
+Generic in-memory caching primitives, scoped to the life of one process. The
+vessel metadata cache is a bare `Cache` instance constructed at module scope in
+`../tools/find-vessels.ts` (no `ttlMs` — vessel identity doesn't change within a
+process run); EEZ region lookups still need their own instance constructed when
+`find_region` is implemented. The 4Wings report cache is already wired up inside
+`ReportQueue` below.
 
 - `cache.ts` — `Cache<K, V>`, a `Map`-backed cache class with optional per-instance
   TTL (stateful infrastructure, per `docs/claude/conventions.md`). Expiry is lazy
